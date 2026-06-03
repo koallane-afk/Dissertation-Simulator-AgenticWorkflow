@@ -103,7 +103,7 @@ HUB_FILES = [
     "_context_lib.py",
 ]
 
-# Error types (aligned with _context_lib.py _classify_error_patterns)
+# Error types (aligned with _facts_lib.py _classify_error_patterns)
 VALID_ERROR_TYPES = {
     "file_not_found", "edit_mismatch", "dependency",
     "syntax_error", "type_error", "runtime_error",

@@ -458,3 +458,76 @@ def atomic_write(filepath, content):
             pass
         raise
 
+
+# --- Token-estimation foundation + shared diag regex (ADR-079 inc4) -------
+# estimate_tokens + its budget constants and _DIAG_EVIDENCE_RE are used
+# across facts and diagnosis — promoted to the foundation layer.
+CONTEXT_WINDOW_TOKENS = 200_000
+
+
+SYSTEM_OVERHEAD_TOKENS = 15_000
+
+
+EFFECTIVE_CAPACITY = CONTEXT_WINDOW_TOKENS - SYSTEM_OVERHEAD_TOKENS
+
+
+THRESHOLD_75_TOKENS = int(EFFECTIVE_CAPACITY * 0.75)
+
+
+_DIAG_EVIDENCE_RE = re.compile(
+    r"^-\s*\*?\*?Evidence\*?\*?\s*:\s*(.+)", re.MULTILINE | re.IGNORECASE,
+)
+
+
+def estimate_tokens(transcript_path, entries=None):
+    """
+    Multi-signal token estimation.
+    Returns (estimated_tokens, signals_dict)
+    """
+    signals = {}
+
+    # Signal 1: File size
+    file_size = 0
+    if transcript_path and os.path.exists(transcript_path):
+        file_size = os.path.getsize(transcript_path)
+    signals["file_size_bytes"] = file_size
+    tokens_from_size = int(file_size / CHARS_PER_TOKEN)
+
+    # Signal 2: Message count (if entries available)
+    if entries:
+        user_count = sum(1 for e in entries if e["type"] == "user_message")
+        assistant_count = sum(1 for e in entries if e["type"] == "assistant_text")
+        tool_count = sum(1 for e in entries if e["type"] == "tool_use")
+        signals["user_messages"] = user_count
+        signals["assistant_messages"] = assistant_count
+        signals["tool_uses"] = tool_count
+
+        # Heuristic: each substantial exchange ≈ 3-5K tokens
+        tokens_from_messages = (user_count + assistant_count) * 2000 + tool_count * 1500
+    else:
+        tokens_from_messages = tokens_from_size
+
+    # Signal 3: Content character count
+    if entries:
+        total_chars = sum(len(e.get("content", "")) for e in entries)
+        signals["total_content_chars"] = total_chars
+        tokens_from_chars = int(total_chars / CHARS_PER_TOKEN)
+    else:
+        tokens_from_chars = tokens_from_size
+
+    # Weighted average (file size is most reliable)
+    estimated = int(
+        tokens_from_size * 0.5 +
+        tokens_from_messages * 0.25 +
+        tokens_from_chars * 0.25
+    )
+
+    # Add system overhead
+    estimated += SYSTEM_OVERHEAD_TOKENS
+
+    signals["estimated_tokens"] = estimated
+    signals["threshold_75"] = THRESHOLD_75_TOKENS
+    signals["over_threshold"] = estimated > THRESHOLD_75_TOKENS
+
+    return estimated, signals
+

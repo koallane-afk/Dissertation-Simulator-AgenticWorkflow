@@ -1269,6 +1269,22 @@
 - **관련 ADR**: ADR-076 (Inc 1), ADR-077 (Inc 2), ADR-030 (상수 중앙화), ADR-061 (Doc-Code Sync — DC-8/9/10)
 - **관련 커밋**: (미커밋 — Increment 3 구현 완료, 적대적 검증 수정 포함)
 
+### ADR-079: `_context_lib.py` 모듈 분리 (Increment 4) — `_facts_lib` 추출 + `_core_lib` 확장
+
+- **날짜**: 2026-06-04
+- **상태**: `Accepted` (Increment 4 구현 완료 — 마지막 `_diagnosis`는 별도 ADR)
+- **맥락**: ADR-076~078 후속. post-inc3 `_context_lib.py`(2,553줄)에서 **세션 facts + Knowledge Archive 도메인**을 추출. facts는 `_core_lib`+`_capture_lib`+`_validation_lib`+`_snapshot_lib` **4개 모듈 전부에 의존하는 최상위 계층**.
+- **결정**: **Increment 4** = `_core_lib` 확장 + `_facts_lib` 추출:
+  - `_core_lib.py`(19→25): `estimate_tokens` + 토큰 budget 상수 4개(`CONTEXT_WINDOW_TOKENS`·`SYSTEM_OVERHEAD_TOKENS`·`EFFECTIVE_CAPACITY`·`THRESHOLD_75_TOKENS`) + `_DIAG_EVIDENCE_RE`(facts·diagnosis 공유) 이동.
+  - `_facts_lib.py`(신규, 24심볼): `extract_session_facts`(427줄)·`archive_and_index_session`·`_classify_error_patterns`·`_extract_success_patterns`·`_extract_hypothesis_graveyard`·KI 회전 등 + `_extract_diagnosis_patterns`(facts만 사용 → diagnosis에서 재배치). `_core`(5)+`_capture`(5)+`_validation`(1)+`_snapshot`(1) import.
+  - `_context_lib.py`(2,553→1,113): shim에 `from _facts_lib import *` + underscore 재수출(`_extract_hypothesis_graveyard`·`_extract_thesis_continuity`); core underscore 재수출에 `_DIAG_EVIDENCE_RE` 추가.
+- **근거**: facts는 lower 4모듈 위 최상위 계층 — 의존 방향이 명확. cross-cutting(token-estimation foundation, `_DIAG_EVIDENCE_RE`)을 `_core`로 승격.
+- **inc3 교훈 적용(핵심)**: 마이그레이션 **전에** Store-ctx-aware AST free-name 해석 검사(AnnAssign·comprehension·walrus 처리)로 facts 함수가 참조하는 모든 cross-module 심볼의 import 완전성을 검증 → **inc3 버그 클래스(누락 cross-module import) 사전 차단**. 적대적 검증 워크플로 3렌즈가 정적 AST + **런타임 실행**(extract_session_facts·archive_and_index_session, swallowed-NameError 경로 포함)으로 **전부 `refuted:false`** 확인.
+- **구현 검증**: verbatim 30심볼(mismatch 0)·개수 보존(23+24+6=53, core 19→25)·`unittest discover` 1,350 OK(`_test_facts_lib.py` 9테스트 추가)·`pytest tests/e2e` 108 passed·무순환·`setup_maintenance` 83/83·적대적 3렌즈 refuted:false.
+- **부수 수정**: 적대적 검증이 찾은 stale 주석 2개(`_context_lib.py`·`self_improve_manager.py`의 `_classify_error_patterns` 위치 참조 — facts로 이동) 정합.
+- **관련 ADR**: ADR-076~078, ADR-030 (상수 중앙화), ADR-061 (Doc-Code Sync)
+- **관련 커밋**: (미커밋 — Increment 4 구현 완료)
+
 ---
 
 ## 문서 관리

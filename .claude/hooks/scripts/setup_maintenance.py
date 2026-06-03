@@ -480,8 +480,8 @@ def _check_doc_code_sync(project_dir):
     instead of correct code (NEVER DO override risk).
 
     DC-1: docs/protocols/autopilot-execution.md NEVER DO retry limits ↔ validate_retry_budget.py constants
-    DC-2: D-7 Risk score constants (_context_lib.py ↔ predictive_debug_guard.py)
-    DC-3: D-7 ULW detection pattern (validate_retry_budget.py ↔ _context_lib.py)
+    DC-2: D-7 Risk score constants (_diagnosis_lib.py ↔ predictive_debug_guard.py)
+    DC-3: D-7 ULW detection pattern (validate_retry_budget.py ↔ _diagnosis_lib.py)
     DC-6: Hook configuration consistency (settings.json hook scripts ↔ CLAUDE.md Hook table)
     DC-7: English-First MANDATORY Hub-and-Spoke sync (AGENTS.md ↔ 5 Spoke files) — ADR-027a
     DC-8: Script count verification (CLAUDE.md header count ↔ actual disk count)
@@ -567,7 +567,9 @@ def _check_doc_code_sync(project_dir):
         ))
 
     # --- DC-2: D-7 Risk score constants sync ---
-    lib_path = os.path.join(scripts_dir, "_context_lib.py")
+    # Risk/ULW/retry constants moved from _context_lib.py to _diagnosis_lib.py
+    # during the module split (ADR-076..080); DC-2/3/4 read them from there.
+    lib_path = os.path.join(scripts_dir, "_diagnosis_lib.py")
     guard_path = os.path.join(scripts_dir, "predictive_debug_guard.py")
 
     dc2_ok = True
@@ -636,7 +638,7 @@ def _check_doc_code_sync(project_dir):
 
     # --- DC-3: D-7 ULW detection pattern sync ---
     # D-7 verifier: This canonical string must match the ULW detection pattern
-    # in _context_lib.py and validate_retry_budget.py.
+    # in _diagnosis_lib.py and validate_retry_budget.py.
     # If those files change their pattern, this must change too.
     # We search for this exact substring rather than parsing quoted strings,
     # which avoids fragile quote-matching across r-strings and compiled patterns.
@@ -666,7 +668,7 @@ def _check_doc_code_sync(project_dir):
                 if not budget_has:
                     missing.append("validate_retry_budget.py")
                 if not lib_has:
-                    missing.append("_context_lib.py")
+                    missing.append("_diagnosis_lib.py")
                 results.append(_result(
                     WARNING, "WARN", "Doc-code sync: DC-3",
                     f"D-7 ULW canonical pattern not found in: "
@@ -685,7 +687,7 @@ def _check_doc_code_sync(project_dir):
         ))
 
     # --- DC-4: D-7 Retry limit constants sync ---
-    # _context_lib.py has _DEFAULT_MAX_RETRIES / _ULW_MAX_RETRIES
+    # _diagnosis_lib.py has _DEFAULT_MAX_RETRIES / _ULW_MAX_RETRIES
     # that must match validate_retry_budget.py's constants.
     dc4_ok = True
     if os.path.isfile(budget_path) and os.path.isfile(lib_path):

@@ -293,6 +293,7 @@ AgenticWorkflow/
 │   │   ├── _capture_lib.py    (세션 캡처 — transcript 파싱·capture_sot/git·completion-state·ULW 감지·phase 분류, _core_lib 의존 ADR-077)
 │   │   ├── _snapshot_lib.py   (스냅샷 생성·압축·decision/quality-gate 추출 — generate_snapshot_md+압축 파이프라인, _core_lib+_capture_lib 의존 ADR-078)
 │   │   ├── _facts_lib.py      (세션 facts 추출·Knowledge Archive 관리 — extract_session_facts+archive+quarterly 회전, _core+_capture+_validation+_snapshot 의존 ADR-079)
+│   │   ├── _diagnosis_lib.py  (Predictive Debugging — abductive 실패 진단·risk 점수 집계·hypothesis 우선순위·diagnosis-log 검증, _core 의존 ADR-080)
 │   │   ├── save_context.py    (저장 엔진)
 │   │   ├── restore_context.py (복원 — RLM 포인터 + 완료/Git 상태 + Predictive Debugging 위험 점수 캐시 생성 + QO-1~4 품질 최적화: Gate 피드백(JSON+state machine), 이전 섹션 요약(정확한 워드카운트), 11개 scoring signal ACTIVE RETRIEVAL, step 메타데이터)
 │   │   ├── update_work_log.py (작업 로그 누적 — 9개 도구 추적)

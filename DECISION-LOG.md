@@ -1285,6 +1285,24 @@
 - **관련 ADR**: ADR-076~078, ADR-030 (상수 중앙화), ADR-061 (Doc-Code Sync)
 - **관련 커밋**: (미커밋 — Increment 4 구현 완료)
 
+### ADR-080: `_context_lib.py` 모듈 분리 (Increment 5, 최종) — `_diagnosis_lib` 추출 + split 완료
+
+- **날짜**: 2026-06-04
+- **상태**: `Accepted` (Increment 5 구현 완료 — **5증분 도메인 split 완료**)
+- **맥락**: ADR-076~079 후속, 마지막 증분. post-inc4 `_context_lib.py`(1,113줄)에서 **predictive-debugging(진단/risk) 도메인**을 추출. diagnosis는 `_core_lib`에만 의존하는 near-leaf.
+- **결정**: **Increment 5** = `_diagnosis_lib` 추출 (`_core` 확장 불필요 — 모든 의존이 이미 core):
+  - `_diagnosis_lib.py`(신규, 18심볼): `diagnose_failure_context`·`_gather_*`·`_determine_hypothesis_priority`·`_check_fast_path_eligibility`·`validate_diagnosis_log`·`aggregate_risk_scores`·`validate_risk_scores` + risk 상수. `_core_lib`(6: ERROR_RESULT_CHARS·MIN_OUTPUT_SIZE·_DIAG_EVIDENCE_RE·_DIAG_GATE_RE·_DIAG_SELECTED_RE·sot_paths)에만 의존.
+  - `_context_lib.py`(1,113→200): shim에 `from _diagnosis_lib import *` (underscore 재수출 0 — 외부 사용 없음). 잔류 = 5 utils(append_with_lock·load_work_log·should_skip_save·read_stdin_json·get_thesis_state_summary) + 6모듈 re-export shim. **`_context_lib`은 이제 utils+shim**.
+  - **DC-2/DC-3/DC-4 repoint**: Risk-score/ULW-canonical/retry-limit 상수가 `_context_lib`→`_diagnosis_lib`로 이동 → `setup_maintenance.py`의 `lib_path`(:572)를 `_diagnosis_lib.py`로 갱신 + 메시지/주석 정합. `predictive_debug_guard.py` D-7 sync 주석도 정합.
+- **근거**: diagnosis는 `_core`만 의존하는 leaf — 의존 방향 명확, cross-cutting 승격 불필요. DC 체크는 D-7 짝의 한쪽이 이동하면 위치를 따라가야 함(DC-5와 동일 패턴).
+- **inc3 교훈 적용**: 마이그레이션 전 free-name 해석 검사 통과 → inc3 버그 클래스 사전 차단. 적대적 검증 3렌즈(missing-import REFUTED, DAG/split-soundness 확인). diagnosis가 `sot_paths`/`MIN_OUTPUT_SIZE`를 except 블록 안에서 호출(inc3 trap geometry 존재)하나 import가 정확해 sot_data=None 분기 런타임 실행에서 NameError 0.
+- **구현 검증**: verbatim 18심볼·개수 보존(5+18=23)·`unittest` 1,357 OK(`_test_diagnosis_lib.py` 7테스트)·`pytest e2e` 108·무순환·`setup_maintenance` 83/83(DC-1~11 전부 PASS).
+- **캡슐화 결정**: 14개 diagnosis `_`-internal(_gather_*·risk 상수 등)은 외부/잔류 사용 0 → 비재수출(ADR-076 원칙 일관).
+- **🏁 SPLIT 완료**: `_context_lib.py` **7,480 → 200줄 (-97%)**. 6개 cohesive deep 모듈(`_core_lib` 25 · `_validation_lib` 57 · `_capture_lib` 16 · `_snapshot_lib` 40 · `_facts_lib` 24 · `_diagnosis_lib` 18) + `_context_lib`(utils+shim). DAG: `_core ← {_validation,_capture} ← _snapshot ← _facts`; `_core ← _diagnosis`; `_context_lib` re-export. 행위 byte-verbatim 보존, 1,357 유닛+108 E2E 불변.
+- **프로세스 노트**: 마이그레이션 스크립트의 repo-wide `os.walk`는 `.git`/`thesis-output`(2,815파일) 누적으로 느려짐 → `dn[:]` prune 필요(프로덕션 코드 무관).
+- **관련 ADR**: ADR-076~079 (split inc1-4), ADR-030 (상수 중앙화), ADR-061 (Doc-Code Sync DC-2~11)
+- **관련 커밋**: (미커밋 — Increment 5 구현 완료, split 완료)
+
 ---
 
 ## 문서 관리

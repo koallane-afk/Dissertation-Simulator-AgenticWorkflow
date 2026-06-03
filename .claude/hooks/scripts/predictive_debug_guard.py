@@ -35,12 +35,12 @@ import json
 import os
 import sys
 
-# --- Constants (self-contained — NOT imported from _context_lib.py) ---
-# D-7: Intentionally duplicated from _context_lib.py for fast startup.
-#      Changing _RISK_SCORE_THRESHOLD or _RISK_MIN_SESSIONS in _context_lib.py
-#      REQUIRES updating these values to stay in sync.
-RISK_THRESHOLD = 3.0        # Sync: _context_lib.py _RISK_SCORE_THRESHOLD
-MIN_SESSIONS = 5            # Sync: _context_lib.py _RISK_MIN_SESSIONS
+# --- Constants (self-contained — NOT imported from _diagnosis_lib.py) ---
+# D-7: Intentionally duplicated from _diagnosis_lib.py for fast startup.
+#      Changing _RISK_SCORE_THRESHOLD or _RISK_MIN_SESSIONS in _diagnosis_lib.py
+#      REQUIRES updating these values to stay in sync. (Moved from _context_lib.py per ADR-080.)
+RISK_THRESHOLD = 3.0        # Sync: _diagnosis_lib.py _RISK_SCORE_THRESHOLD
+MIN_SESSIONS = 5            # Sync: _diagnosis_lib.py _RISK_MIN_SESSIONS
 # Cache file path relative to project's .claude/context-snapshots/
 CACHE_FILENAME = "risk-scores.json"
 # Maximum age of cache in seconds (2 hours — beyond this, data is stale)

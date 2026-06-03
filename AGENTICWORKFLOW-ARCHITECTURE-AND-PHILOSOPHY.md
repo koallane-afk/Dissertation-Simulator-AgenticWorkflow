@@ -243,7 +243,7 @@ graph TB
         end
 
         subgraph "Context Preservation + Safety"
-            CPS["hooks/scripts/<br/>67개 프로덕션 + 7개 모듈 + 48개 테스트 스크립트<br/>(Core 4 + pCCS 7 + PD 4 + Quality 22 + Safety 6 + Context 7 + 기타 17)"]
+            CPS["hooks/scripts/<br/>67개 프로덕션 + 8개 모듈 + 49개 테스트 스크립트<br/>(Core 4 + pCCS 7 + PD 4 + Quality 22 + Safety 6 + Context 7 + 기타 17)"]
             CSS["context-snapshots/<br/>런타임 스냅샷"]
         end
 

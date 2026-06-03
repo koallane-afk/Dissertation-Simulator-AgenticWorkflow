@@ -420,7 +420,7 @@ def _check_sot_write_safety(scripts_dir):
     Catches ~70% of common SOT write violations. Remaining 30% (indirect
     variable references) are covered by code review + user approval.
     """
-    # D-7 intentional duplication — must match _context_lib.py:SOT_FILENAMES
+    # D-7 intentional duplication — must match _core_lib.py:SOT_FILENAMES
     SOT_FILENAMES = ("state.yaml", "state.yml", "state.json")
     SOT_MARKERS = SOT_FILENAMES + ("sot_paths",)
     # Scripts that legitimately reference SOT for read-only access

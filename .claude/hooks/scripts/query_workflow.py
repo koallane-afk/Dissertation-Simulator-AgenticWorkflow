@@ -45,7 +45,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _context_lib import validate_sot_schema
 
 # ---------------------------------------------------------------------------
-# SOT discovery — extends _context_lib.py:SOT_FILENAMES with thesis SOT (session.json)
+# SOT discovery — extends _core_lib.py:SOT_FILENAMES with thesis SOT (session.json)
 # ---------------------------------------------------------------------------
 _SOT_FILENAMES = ("state.yaml", "state.yml", "state.json", "session.json")
 

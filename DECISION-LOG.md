@@ -1212,6 +1212,29 @@
 - **파급 효과**: 기존 에이전트 호출 흐름 변경 없음. `pre_execution_command`는 optional (None이면 프리페치 건너뜀). TS8 확장은 `-search` suffix 한정. 비파괴적.
 - **관련 ADR**: ADR-071 (Hallucination Containment), ADR-064 (query_step.py), ADR-073 (QO-1~5)
 
+### ADR-076: `_context_lib.py` 모듈 분리 (Increment 1) — `_core_lib` + `_validation_lib` 추출 via Re-export Shim
+
+- **날짜**: 2026-06-03
+- **상태**: `Accepted` (설계 확정 + **Increment 1 구현 완료** 2026-06-03 — 후속 증분 `_capture`/`_snapshot`/`_facts`/`_diagnosis`는 별도 ADR)
+- **맥락**: `/improve-codebase-architecture` 분석 결과, `_context_lib.py`가 **~7,480줄·public 함수 ~51개**로 5~6개의 무관 도메인(컨텍스트 보존·SOT 캡처·품질게이트 검증·predictive-debugging risk·pCCS signal·abductive diagnosis)을 한 파일에 번들하고 있다. 도메인 간 호출 엣지는 **0**(검증된 깨끗한 DAG)인데도, caller/AI는 함수 하나를 찾으려 interface 51개 전체를 항해해야 한다. 외부에서 실제 import되는 함수는 51개 중 **9개**뿐 — interface 대부분이 내부 orchestration이다. 도메인별로는 deep하나 *파일*은 cohesive한 deep 모듈이 아니라 multi-domain 번들이며, 이는 AI-navigability와 locality(예: 스냅샷 포맷 변경이 1,000줄에 흩어진 함수들을 동시 수정)를 저해한다.
+- **결정**: 점진적(increment) 분리. **Increment 1**만 확정한다 (나머지는 후속 ADR):
+  - `_core_lib.py` (foundation — 타 도메인 의존 0): `sot_paths`, `SOT_FILENAMES`, `MIN_OUTPUT_SIZE`, `extract_remediations`, `validate_sot_schema`(SOT 구조 검증) + cross-cutting 상수.
+  - `_validation_lib.py` (품질게이트 검증기 — `_core_lib`의 `sot_paths`·`MIN_OUTPUT_SIZE` + stdlib에만 의존): pacs(`validate_pacs_output`·`verify_pacs_arithmetic`·`_verify_pre_mortem_substance`·`_PACS_*` regex), traceability(`validate_cross_step_traceability`·`_TRACE_*`·`_slugify_heading`·`_MIN_TRACE_MARKERS`), review(`validate_review_output`·`parse_review_verdict`·`calculate_pacs_delta`·`validate_review_sequence`), translation(`validate_translation_output`·`check_glossary_freshness`), verification(`validate_verification_log`), domain-knowledge(`validate_domain_knowledge`+helpers), workflow(`validate_workflow_md`), L0 anti-skip(`validate_step_output`).
+  - `_context_lib.py` = `_core_lib`+`_validation_lib`를 re-export하는 **shim** + 미추출 코드(snapshot·facts·capture·diagnosis·risk; foundation은 `_core_lib`에서 import).
+  - **보류(향후 증분)**: `_capture_lib`(parse_transcript·capture_sot/git·completion-state), `_snapshot_lib`(generate_snapshot_md+압축+cleanup), `_facts_lib`(extract_session_facts·archive_and_index), `_diagnosis_lib`(diagnose_failure_context·validate_diagnosis_log·aggregate_risk_scores).
+- **근거**:
+  - 절대 기준 1(품질) — AI-navigability는 자식 시스템 품질의 직접 요인. 모듈당 interface를 51→~10으로 축소하고 도메인 변경의 locality를 확보한다(leverage는 행위 보존으로 불변).
+  - **Re-export shim**: 40개 importer + 1,311 유닛 + 108 E2E 테스트가 전부 불변 → 비파괴적, 즉시 green. shim은 호환 adapter이고 실제 seam은 신규 모듈이다.
+  - **`_core_lib` 동반 추출이 필수**: validation 검증기(`validate_cross_step_traceability`·`validate_step_output`)가 `sot_paths`에 의존하므로, shim의 `from _validation_lib import *`와 결합하면 순환 import가 발생한다. foundation을 `_core_lib`로 단방향 분리(`_core_lib ← _validation_lib`)하면 import 순서와 무관하게 순환이 소멸한다.
+  - **경계 = 품질게이트 검증기만**: `validate_sot_schema`는 SOT-구조 검증이라 `_core_lib`, diagnosis/risk(`validate_diagnosis_log`·`aggregate_risk_scores`·`diagnose_failure_context`)는 응집을 위해 향후 `_diagnosis_lib`로 보류.
+  - 도메인 간 호출 엣지 0(검증된 DAG) → 순수 mechanical move로 행위 보존, 전체 테스트 스위트를 회귀 게이트로 안전 보장.
+- **대안 기각**: (1) **Hard cutover**(40 importer 즉시 재지정) — blast radius 큼, 비파괴 원칙 위배; (2) **bottom-import shim 트릭**(shim 줄을 파일 맨 아래 배치) — import 순서 취약, `_validation_lib`를 먼저 import 시 검증기 누락으로 `_context_lib.validate_*` 조용히 소실; (3) **validation 함수 내 deferred import** — 코드 지저분·은닉 결합; (4) **5-way 일괄 분리** — churn 과다, 첫 증분에 위험 집중; (5) **분리 안 함** — navigability/locality 부채 지속.
+- **파급 효과**: AST 기반 verbatim 이동으로 구현 — 62심볼 이동(core 5 + validation 57), `_context_lib` 7,480→5,185줄. 외부 import·테스트·CLI shell·command `.md` 전부 불변. ADR-030(상수 중앙화)과 무충돌. `SOT_FILENAMES` canonical 위치가 `_context_lib`→`_core_lib`로 이동 → DC-5 체크·`setup_init.py`/`query_workflow.py` 주석을 `_core_lib` 기준으로 갱신. 신규 모듈 2개는 CLAUDE.md 트리·AGENTS.md 트리에 등록("2개 모듈"→"4개 모듈"), `setup_maintenance` 83/83 유지.
+- **구현 검증**: 결정론적 6중 — 이동 62심볼 byte-verbatim diff(mismatch 0)·개수 보존(123+5+57=185)·`unittest discover` 1,311 OK·`pytest tests/e2e` 108 passed·외부 50심볼 import 해석·3모듈 standalone 무순환. + 적대적 검증 워크플로 3렌즈(완전성·순환/순서·import-time 의미론) 전부 `refuted:false`.
+- **캡슐화 결정**: `_`-prefixed validation 내부 심볼(regex·private helper 38개)은 `_context_lib`로 **재수출하지 않음**(deepening = 작은 interface 뒤로 내부 은닉; 외부 사용처 0 확인). 외부가 실제 import하는 underscore 3개(`_DKS_REF_RE`·`_find_translation_files_for_step`·`_TRACE_MARKER_RE`)만 명시적 재수출. `_context_lib`·`_validation_lib` 상단에 `sys.path.insert` 부트스트랩 추가 → file-path 로딩에서도 sibling 모듈 해석(import-time divergence 제거).
+- **관련 ADR**: ADR-018 (context_guard 통합 디스패처), ADR-030 (절삭 상수 중앙화), ADR-008 (Hub-Spoke), ADR-061 (Doc-Code Sync — DC-5/DC-9/DC-10 인벤토리 갱신)
+- **관련 커밋**: (미커밋 — Increment 1 구현 완료, 11파일 변경 + 신규 2파일)
+
 ---
 
 ## 문서 관리

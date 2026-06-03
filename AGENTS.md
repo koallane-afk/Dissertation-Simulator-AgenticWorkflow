@@ -288,6 +288,8 @@ AgenticWorkflow/
 │   │   ├── context_guard.py   (Hook 통합 디스패처 — 4개 이벤트의 단일 진입점)
 │   │   ├── _context_lib.py    (공유 라이브러리 — 파싱, 생성, SOT 캡처, Smart Throttling, Autopilot 상태 읽기·검증, ULW 감지·준수 검증, 절삭 상수 중앙화, sot_paths() 경로 통합, 다단계 전환 감지, 결정 품질 태그 정렬, Error Taxonomy 12패턴+Resolution 매칭, Success Patterns(Edit/Write→Bash 성공 시퀀스 추출), IMMORTAL-aware 압축+감사 추적, E5 Guard 중앙화(is_rich_snapshot+update_latest_with_guard), Knowledge Archive 통합(archive_and_index_session — 부분 실패 격리), 경로 태그 추출(extract_path_tags), KI 스키마 검증(_validate_session_facts — RLM 필수 키 보장), SOT 스키마 검증(validate_sot_schema — 워크플로우 state.yaml 구조 무결성 8항목 검증: S1-S6 기본 + S7 pacs 5필드(dimensions, current_step_score, weak_dimension, history, pre_mortem_flag) + S8 active_team 5필드(name, status(partial|all_completed), tasks_completed, tasks_pending, completed_summaries)), Adversarial Review P1 검증(validate_review_output R1-R5, parse_review_verdict, calculate_pacs_delta, validate_review_sequence), Translation P1 검증(validate_translation_output T1-T7, check_glossary_freshness T8, verify_pacs_arithmetic T9 범용, validate_verification_log V1a-V1c), Predictive Debugging P1(aggregate_risk_scores+validate_risk_scores RS1-RS6+_RISK_WEIGHTS 13개 가중치+_RECENCY_DECAY_DAYS 감쇠), pACS P1 검증(validate_pacs_output PA1-PA6 — pACS 로그 구조 무결성: 파일 존재·최소 크기·차원 점수·Pre-mortem·min() 산술·Color Zone), L0 Anti-Skip Guard(validate_step_output L0a-L0c — 산출물 파일 존재+최소 크기+비공백), Team Summaries KI 아카이브(_extract_team_summaries — SOT active_team.completed_summaries → KI 보존), Abductive Diagnosis Layer(diagnose_failure_context 사전 증거 수집 + validate_diagnosis_log AD1-AD10 사후 검증 + _extract_diagnosis_patterns KA 아카이빙 + Fast-Path FP1-FP3 + 가설 우선순위 H1/H2/H3), 모듈 레벨 regex 컴파일(9개+8개+8개+4개+5개 패턴 — 프로세스당 1회), QO-5 KI 품질 필드(previous_section_outputs+review_feedback_summary(parse_review_verdict 재사용)+word_count_trend — 크로스세션 품질 컨텍스트))
 │   │   ├── _claim_patterns.py (Claim ID 정규식 SOT — 47개 prefix 패턴 중앙화, 모든 claim 관련 스크립트가 import)
+│   │   ├── _core_lib.py       (Foundation — sot_paths·SOT_FILENAMES·MIN_OUTPUT_SIZE·extract_remediations·validate_sot_schema + core 상수, _context_lib에서 추출 ADR-076, DAG root)
+│   │   ├── _validation_lib.py (품질게이트 P1 검증기 — pacs·traceability·review·translation·verification·domain-knowledge·workflow·L0 anti-skip, _core_lib 의존 ADR-076)
 │   │   ├── save_context.py    (저장 엔진)
 │   │   ├── restore_context.py (복원 — RLM 포인터 + 완료/Git 상태 + Predictive Debugging 위험 점수 캐시 생성 + QO-1~4 품질 최적화: Gate 피드백(JSON+state machine), 이전 섹션 요약(정확한 워드카운트), 11개 scoring signal ACTIVE RETRIEVAL, step 메타데이터)
 │   │   ├── update_work_log.py (작업 로그 누적 — 9개 도구 추적)
@@ -1501,6 +1503,23 @@ AGENTS.md의 절대 기준이 변경되면, 모든 Spoke 파일의 인라인 복
 | `validate_task_completion.py` | 태스크 완료 검증 (CLI-only, Orchestrator 호출) |
 | `teammate_health_check.py` | 에이전트 팀 건강 점검 |
 | `verify_translation_terms.py` | T10-T12 번역 콘텐츠 보존 검증 (P1) |
+| `compute_pccs_signals.py` | pCCS Phase A — P1 signal 추출, claim-map 생성 |
+| `validate_pccs_assessment.py` | pCCS Phase C — CA1-CA5 LLM 평가 검증 (P1 결정론적) |
+| `generate_pccs_report.py` | pCCS Phase D — P1 합성, 최종 pCCS 점수 계산 |
+| `validate_pccs_output.py` | pCCS PC1-PC7 구조 검증 (P1 결정론적) |
+| `pccs_calibration.py` | pCCS 교정 delta 계산 (fact-checker/L1 기반, P1 결정론적) |
+| `run_pccs_pipeline.py` | pCCS P1 Pipeline Runner — DEGRADED/FULL 단일 진입점 |
+| `self_improve_manager.py` | KBSI SOT 관리 (register/apply/reject/status/sync) |
+| `validate_self_improvement.py` | KBSI SI-1~SI-6 insight 검증 (P1 결정론적) |
+| `validate_agent_dna.py` | DA1-DA7 에이전트 DNA 구조 검증 (P1 결정론적, CLI) |
+| `validate_claim_inheritance.py` | CI1-CI4 Claim 상속 검증 (P1 결정론적, Research 도메인) |
+| `validate_criteria_evidence.py` | VE1-VE5 할루시네이션 교차 검증 (P1 결정론적, CLI) |
+| `validate_dialogue_state.py` | DA1-DA5 Adversarial Dialogue 상태 검증 (P1 결정론적) |
+| `validate_fork_safety.py` | Fork 안전성 FS-1~FS-5 검증 (P1 결정론적, CLI) |
+| `validate_skill_output.py` | SK-1~SK-5 스킬 산출물 구조 검증 (P1 결정론적, CLI) |
+| `validate_team_synthesis.py` | TS1-TS5 Agent Team 합성 완전성 검증 (P1 결정론적, CLI) |
+| `run_mypy_check.py` | mypy 타입 검증 훅 (Phase 1 strict, 비엄격 warn-only, exit 0) |
+| `merge_ko_to_docx.py` | 한국어 번역본 → pandoc .docx 병합 (P1 결정론적, exit 0) |
 
 ### 10.5 E2E 테스트
 

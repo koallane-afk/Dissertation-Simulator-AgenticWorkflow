@@ -756,10 +756,11 @@ def _check_doc_code_sync(project_dir):
         ))
 
     # --- DC-5: D-7 SOT_FILENAMES sync across 3 files ---
-    # _context_lib.py:SOT_FILENAMES ↔ setup_init.py:SOT_FILENAMES ↔ query_workflow.py:_SOT_FILENAMES
+    # _core_lib.py:SOT_FILENAMES ↔ setup_init.py:SOT_FILENAMES ↔ query_workflow.py:_SOT_FILENAMES
+    # (canonical SOT_FILENAMES moved from _context_lib.py to _core_lib.py per ADR-076)
     dc5_ok = True
     dc5_files = {
-        "_context_lib.py": os.path.join(scripts_dir, "_context_lib.py"),
+        "_core_lib.py": os.path.join(scripts_dir, "_core_lib.py"),
         "setup_init.py": os.path.join(scripts_dir, "setup_init.py"),
         "query_workflow.py": os.path.join(scripts_dir, "query_workflow.py"),
     }
@@ -806,15 +807,36 @@ def _check_doc_code_sync(project_dir):
             ))
 
     if len(sot_filenames_values) >= 2:
-        canonical = None
+        # _context_lib.py is the canonical base set; setup_init.py must match it
+        # EXACTLY (D-7 intentional duplication). query_workflow.py legitimately
+        # EXTENDS the base with the thesis SOT (session.json) — a documented
+        # superset (see query_workflow.py:_SOT_FILENAMES comment), not drift.
+        _THESIS_SOT_EXT = {"session.json"}
+        base_label = "_core_lib.py"
+        base_val = sot_filenames_values.get(
+            base_label, next(iter(sot_filenames_values.values()))
+        )
+        base_set = set(base_val)
         for label, val in sot_filenames_values.items():
-            if canonical is None:
-                canonical = (label, val)
-            elif val != canonical[1]:
+            if label == base_label:
+                continue
+            val_set = set(val)
+            if label == "query_workflow.py":
+                missing = base_set - val_set
+                extra = val_set - base_set
+                if missing or (extra - _THESIS_SOT_EXT):
+                    dc5_ok = False
+                    results.append(_result(
+                        WARNING, "WARN", "Doc-code sync: DC-5",
+                        f"SOT_FILENAMES mismatch: {base_label}={base_val} vs "
+                        f"{label}={val} (allowed thesis extension: "
+                        f"{sorted(_THESIS_SOT_EXT)})",
+                    ))
+            elif val != base_val:
                 dc5_ok = False
                 results.append(_result(
                     WARNING, "WARN", "Doc-code sync: DC-5",
-                    f"SOT_FILENAMES mismatch: {canonical[0]}={canonical[1]} vs {label}={val}",
+                    f"SOT_FILENAMES mismatch: {base_label}={base_val} vs {label}={val}",
                 ))
 
     if dc5_ok and len(sot_filenames_values) == len(dc5_files):

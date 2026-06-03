@@ -1247,7 +1247,7 @@
 - **근거**: 절대 기준 1(품질) — interface 추가 축소·locality 향상. 중간 계층이지만 capture→잔류 역참조 0이라 shim star-import로 안전(잔류→capture는 call-time 해석). 공유 절삭 상수/`_truncate`를 `_core_lib`로 올려 순환 차단(inc1의 `sot_paths`와 동일 패턴).
 - **캡슐화 결정**: capture `_`-prefixed 내부 헬퍼 6개(`_parse_user_entry`·`_parse_assistant_entry`·`_extract_tool_use_summary`·`_extract_tool_result_summary`·`_extract_file_from_nearby_tool_use`·`_classify_phase`)는 외부 import 0·잔류 호출 0 → **재수출하지 않음**(ADR-076 캡슐화 원칙 일관: 외부 사용 underscore만 재수출, capture는 0개). `_capture_lib` 헤더는 실사용 stdlib(json·os·re·sys·subprocess·datetime)로 트림.
 - **구현 검증**: 결정론적 — 이동 26심볼 byte-verbatim(mismatch 0)·개수 보존(97 ctx + 16 cap + 10→core = 123, core 5→15)·기존 5 core 불변·`unittest discover` 1,311 OK·`pytest tests/e2e` 108 passed·외부 심볼 import 해석·3+1모듈 standalone 무순환·`setup_maintenance` 83/83. + 적대적 검증 워크플로 3렌즈(완전성/순환·import-time 의미론·행위 보존) 전부 `refuted:false`.
-- **알려진 갭(후속 권장)**: capture 16함수는 **직접 유닛 테스트 0**(선재 — 모놀리스에도 없었고 Hook 런타임 경로라 suite 미커버). 적대 검증이 16개 전수 smoke-test로 현재 정상 확인. `_test_capture_lib.py` 추가를 후속 권장.
+- **커버리지 갭 해소**: 적대적 검증이 드러낸 "capture 16함수 직접 유닛 테스트 0"(선재 — 모놀리스에도 없었음) 갭을 `_test_capture_lib.py`(20 테스트, 16함수 전수 커버: transcript 파싱·SOT/git/completion 캡처·ULW 감지·compliance·phase 분류)로 **해소**. 유닛 1,311→1,331.
 - **대안 기각**: 절삭 상수/`_truncate`를 `_capture_lib`에 두기 → snapshot/diagnosis가 capture를 통해 import해야 해 capture가 사실상 foundation 역할(부정확). bottom-import/deferred import → inc1과 동일 사유로 기각.
 - **관련 ADR**: ADR-076 (Increment 1), ADR-030 (절삭 상수 중앙화), ADR-061 (Doc-Code Sync — DC-8/9/10 인벤토리 갱신)
 - **관련 커밋**: (미커밋 — Increment 2 구현 완료)

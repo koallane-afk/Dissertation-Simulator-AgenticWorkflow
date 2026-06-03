@@ -101,7 +101,7 @@ AgenticWorkflow/
 │   │   ├── predict-failures.md      (/predict-failures — Predictive Debugging 전체 스캔)
 │   │   ├── self-improve.md          (/self-improve — KBSI 자기 개선 분석)
 │   │   └── thesis-*.md (26개)       (/thesis-init, /thesis-start, /thesis-status, /thesis-translate 등 — 논문 워크플로우)
-│   ├── hooks/scripts/               ← Hook + 검증 스크립트 (67개 프로덕션 + 5개 모듈 + 45개 테스트)
+│   ├── hooks/scripts/               ← Hook + 검증 스크립트 (67개 프로덕션 + 5개 모듈 + 46개 테스트)
 │   │   ├── context_guard.py         (통합 디스패처)
 │   │   ├── _context_lib.py          (공유 라이브러리 — 파싱·생성·검증·압축)
 │   │   ├── _claim_patterns.py       (Claim ID 정규식 SOT — 모든 스크립트 공유 모듈)
@@ -174,7 +174,7 @@ AgenticWorkflow/
 │   │   ├── determine_dialogue_outcome.py (대화 루프 탈출 결정 — P1 결정론적, 할루시네이션 방지)
 │   │   ├── run_academic_search.py (학술 검색 Pre-fetch — --auto-from-sot P1 결정론적 쿼리, sot_registration_command 출력)
 │   │   ├── merge_ko_to_docx.py     (한국어 번역본 → pandoc .docx 병합 — P1 결정론적, exit 0)
-│   │   └── _test_*.py (45개)        (유닛 테스트 — 각 프로덕션 스크립트 대응)
+│   │   └── _test_*.py (46개)        (유닛 테스트 — 각 프로덕션 스크립트 대응)
 │   ├── context-snapshots/           ← 런타임 (gitignored)
 │   └── skills/
 │       ├── workflow-generator/      (워크플로우 설계·생성)
